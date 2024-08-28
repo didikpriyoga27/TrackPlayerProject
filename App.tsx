@@ -1,117 +1,160 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
-
 import React from 'react';
-import type {PropsWithChildren} from 'react';
-import {
-  SafeAreaView,
-  ScrollView,
-  StatusBar,
-  StyleSheet,
-  Text,
-  useColorScheme,
-  View,
-} from 'react-native';
+import {StyleSheet, Text, TouchableOpacity, View} from 'react-native';
+import TrackPlayer, {State, usePlaybackState} from 'react-native-track-player';
 
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
+//@ts-ignore
+import sample from './assets/sample.mp3';
 
-type SectionProps = PropsWithChildren<{
-  title: string;
-}>;
+const App = () => {
+  const playbackState = usePlaybackState();
+  const [isPlaying, setIsPlaying] = React.useState(false);
+  const [progressWidth, setProgressWidth] = React.useState(0);
+  const [isInitialized, setIsInitialized] = React.useState(false);
 
-function Section({children, title}: SectionProps): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-  return (
-    <View style={styles.sectionContainer}>
-      <Text
-        style={[
-          styles.sectionTitle,
-          {
-            color: isDarkMode ? Colors.white : Colors.black,
-          },
-        ]}>
-        {title}
-      </Text>
-      <Text
-        style={[
-          styles.sectionDescription,
-          {
-            color: isDarkMode ? Colors.light : Colors.dark,
-          },
-        ]}>
-        {children}
-      </Text>
-    </View>
-  );
-}
+  const musicJson = [
+    {
+      title: 'Death Bed',
+      artist: 'Powfu',
+      artwork: 'https://samplesongs.netlify.app/album-arts/death-bed.jpg',
+      url: 'https://samplesongs.netlify.app/Death%20Bed.mp3',
+      id: '1',
+    },
+    {
+      title: 'Bad Liar',
+      artist: 'Imagine Dragons',
+      artwork: 'https://samplesongs.netlify.app/album-arts/bad-liar.jpg',
+      url: 'https://samplesongs.netlify.app/Bad%20Liar.mp3',
+      id: '2',
+    },
+    {
+      title: 'Faded',
+      artist: 'Alan Walker',
+      artwork: 'https://samplesongs.netlify.app/album-arts/faded.jpg',
+      url: 'https://samplesongs.netlify.app/Faded.mp3',
+      id: '3',
+    },
+    {
+      title: 'Hate Me',
+      artist: 'Ellie Goulding',
+      artwork: 'https://samplesongs.netlify.app/album-arts/hate-me.jpg',
+      url: 'https://samplesongs.netlify.app/Hate%20Me.mp3',
+      id: '4',
+    },
+    {
+      title: 'Solo',
+      artist: 'Clean Bandit',
+      artwork: 'https://samplesongs.netlify.app/album-arts/solo.jpg',
+      url: 'https://samplesongs.netlify.app/Solo.mp3',
+      id: '5',
+    },
+    {
+      title: 'Without Me',
+      artist: 'Halsey',
+      artwork: 'https://samplesongs.netlify.app/album-arts/without-me.jpg',
+      url: 'https://samplesongs.netlify.app/Without%20Me.mp3',
+      id: '6',
+    },
+  ];
 
-function App(): React.JSX.Element {
-  const isDarkMode = useColorScheme() === 'dark';
-
-  const backgroundStyle = {
-    backgroundColor: isDarkMode ? Colors.darker : Colors.lighter,
+  const handlePlayPause = async () => {
+    if (playbackState.state === State.Playing) {
+      TrackPlayer.pause();
+    } else {
+      await TrackPlayer.add(musicJson[1]);
+      TrackPlayer.play();
+    }
+    setIsPlaying(!isPlaying);
   };
 
+  React.useEffect(() => {
+    if (!isInitialized) {
+      TrackPlayer.setupPlayer();
+      setIsInitialized(true);
+    }
+    setInterval(async () => {
+      TrackPlayer.getProgress().then(({position, duration}) => {
+        if (duration) {
+          const newProgressWidth = (Number(position) / duration) * 100;
+          setProgressWidth(newProgressWidth);
+        } else {
+          setProgressWidth(0);
+        }
+      });
+    }, 1000);
+  }, []);
+
   return (
-    <SafeAreaView style={backgroundStyle}>
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={backgroundStyle.backgroundColor}
-      />
-      <ScrollView
-        contentInsetAdjustmentBehavior="automatic"
-        style={backgroundStyle}>
-        <Header />
-        <View
-          style={{
-            backgroundColor: isDarkMode ? Colors.black : Colors.white,
+    <View style={styles.container}>
+      <View style={styles.progressContainer}>
+        <View style={[styles.progress, {width: `${progressWidth}%`}]} />
+      </View>
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          style={styles.playPauseButton}
+          onPress={async () => {
+            const {position, duration} = await TrackPlayer.getProgress();
+            const newProgressWidth =
+              (Math.max(0, position - 10) / duration) * 100;
+            await TrackPlayer.seekTo(newProgressWidth);
+            setProgressWidth(newProgressWidth);
           }}>
-          <Section title="Step One">
-            Edit <Text style={styles.highlight}>App.tsx</Text> to change this
-            screen and then come back to see your edits.
-          </Section>
-          <Section title="See Your Changes">
-            <ReloadInstructions />
-          </Section>
-          <Section title="Debug">
-            <DebugInstructions />
-          </Section>
-          <Section title="Learn More">
-            Read the docs to discover what to do next:
-          </Section>
-          <LearnMoreLinks />
-        </View>
-      </ScrollView>
-    </SafeAreaView>
+          <Text style={styles.text}>{'<<'}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.playPauseButton}
+          onPress={handlePlayPause}>
+          <Text style={styles.text}>{isPlaying ? 'Pause' : 'Play'}</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={styles.playPauseButton}
+          onPress={async () => {
+            const newProgressWidth = Math.min(100, progressWidth + 10);
+            await TrackPlayer.seekTo(newProgressWidth);
+            setProgressWidth(newProgressWidth);
+          }}>
+          <Text style={styles.text}>{'>>'}</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
   );
-}
+};
 
 const styles = StyleSheet.create({
-  sectionContainer: {
-    marginTop: 32,
-    paddingHorizontal: 24,
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  sectionTitle: {
-    fontSize: 24,
-    fontWeight: '600',
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    gap: 16,
   },
-  sectionDescription: {
-    marginTop: 8,
-    fontSize: 18,
-    fontWeight: '400',
+  playPauseButton: {
+    padding: 8,
+    backgroundColor: '#ccc',
+    borderRadius: 5,
+    marginBottom: 8,
   },
-  highlight: {
-    fontWeight: '700',
+  text: {
+    fontSize: 20,
+    textAlign: 'center',
+  },
+  progressContainer: {
+    height: 20,
+    width: '80%',
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 4,
+    marginBottom: 8,
+  },
+  progress: {
+    height: 20,
+    backgroundColor: '#00b5ec',
   },
 });
 
